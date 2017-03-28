@@ -96,6 +96,7 @@ def analytical_gradient():
     new_y = y + step_size * gradient_y
     new_out = forward_multiply_gate(new_x, new_y)
     print 'Best X: %f, Best Y: %f Best Output: %f' %(new_x, new_y, new_out)
+    print ''
 analytical_gradient()
 
 '''
@@ -120,6 +121,8 @@ def circuit_analytical_gradient():
     derivative_q_wrt_y = 1
     derivative_f_wrt_x = derivative_f_wrt_q * derivative_q_wrt_x
     derivative_f_wrt_y = derivative_f_wrt_q * derivative_q_wrt_y
+    print 'Derivative X: %f, Derivative Y: %f, Derivative Z: %f' \
+            %(derivative_f_wrt_x, derivative_f_wrt_y, derivative_f_wrt_z)
     out = forward_circuit(x, y, z)
     new_x = x + step_size * derivative_f_wrt_x
     new_y = y + step_size * derivative_f_wrt_y
@@ -127,15 +130,19 @@ def circuit_analytical_gradient():
     new_out = forward_circuit(new_x, new_y, new_z)
     print 'Best X: %f, Best Y: %f, Best Z: %f, Best Output: %f' \
                 %(new_x, new_y, new_z, new_out)
+    print ''
 circuit_analytical_gradient()
 
-
-
-
-
-
-
-
-
-
+'''
+We use the numerical gradient to check the analytical gradient.
+'''
+def circuit_numerical_gradient_check():
+    x, y, z = -2, 5, -4
+    h = 0.0001
+    x_derivative = (forward_circuit(x+h, y, z) - forward_circuit(x, y, z)) / h
+    y_derivative = (forward_circuit(x, y+h, z) - forward_circuit(x, y, z)) / h
+    z_derivative = (forward_circuit(x, y, z+h) - forward_circuit(x, y, z)) / h
+    print 'Derivative X: %f, Derivative Y: %f, Derivative Z: %f' \
+            %(x_derivative, y_derivative, z_derivative)
+circuit_numerical_gradient_check()
 
