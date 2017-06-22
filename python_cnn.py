@@ -62,8 +62,13 @@ class Conv(Layer):
     self.out = out
     return out
 
+  def _bprop_preprocess(self, inp_grad):
+    N, H, W, C = inp_grad.shape
+
+
   def bprop(self, inp_grad):
     inv_fil = np.flip(np.flip(self.fil, 1), 2)
+    SN, SH, SW, SC = self.strides
 
 
   # def bprop(self, inp_grad):
@@ -82,12 +87,11 @@ class Conv(Layer):
   #     gradients_per_channel = self.convolution(self.inp, self.inp_grad)
   #     gradients[:, :, :, oc] = gradients_per_channel
 
+# a = np.ones((10, 6, 6, 3))
 
-a = np.ones((10, 6, 6, 3))
-
-conv1 = Conv((2, 2, 3, 32), (1, 2, 2, 1), 'VALID')
-conv1.fprop(a)
-print conv1.out.shape
+# conv1 = Conv((2, 2, 3, 32), (1, 2, 2, 1), 'VALID')
+# conv1.fprop(a)
+# print conv1.out.shape
 # conv1.bprop(a)
 # print conv1.out.shape
 # print conv1.out_grad.shape
