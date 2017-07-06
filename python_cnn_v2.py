@@ -1,9 +1,14 @@
 import math
 import numpy as np
+import tensorflow as tf
 
+np.set_printoptions(precision=50)
 np.random.seed(0)
 
-# Referenced from TensorFlow tf.nn.convolution
+'''
+The following code is referenced from TensorFlow's implementation in
+tf.nn.convolution. Backward propagation of losses in
+'''
 
 class Layer(object):
   def _setup(self):
@@ -65,7 +70,6 @@ class Conv(Layer):
     IN, IH, IW, IC = inp_grad.shape
     SN, SH, SW, SC = self.strides
     FH, FW, FIC, FOC = self.fil.shape
-    fil = np.flip(np.flip(self.fil, 1), 2)
     if self.padding == 'SAME':
       PH = max((OH - 1) * SH + FH - IH, 0)
       PW = max((OW - 1) * SW + FW - IW, 0)
@@ -93,25 +97,38 @@ class Conv(Layer):
                     # the ic and oc convention here may be very confusing
                     # because it's now inverted.
                     out_grad[n, i, j, oc] += \
-                    fil[fh, fw, oc, ic] * inp_grad[n, h, w, ic]
+                    self.fil[fh, fw, oc, ic] * inp_grad[n, h, w, ic]
     self.inp_grad = inp_grad
     self.out_grad = out_grad
     return out_grad
 
-a = np.ones((1, 6, 6, 3))
-b = np.ones((1, 4, 4, 1))
+  def test_fprop(self, arr):
+    my_out = self.fprop(arr)
+    tf_out = tf.nn.conv2d(arr, self.fil, list(self.strides), self.padding)
+    sess = tf.Session()
+    tf_out = sess.run(tf_out)
+    assert tf_out.shape == my_out.shape
+    diff = ((my_out - tf_out) ** 2).mean()
+    assert diff <= 0.00000001
 
-conv1 = Conv((3, 3, 3, 1), (1, 1, 1, 1), 'VALID')
-conv1.fprop(a)
-# print conv1.out.shape
-# print conv1.out
-conv1.bprop(b)
-# print conv1.out_grad.shape
-print conv1.out_grad
-# print conv1.out.shape
-# print conv1.out_grad.shape
-# print conv1.inp.shape
-# print conv1.out.shape
+  def test_bprop(self, arr):
+    my_out = self.fprop(arr)
+    ans = np.ones(my_out.shape, dtype=np.float32)
+    loss = (my_out - ans) ** 2
+    my_grad_out = self.bprop(2*(my_out - ans))
+
+    arr = tf.constant(arr)
+    tf_out = tf.nn.conv2d(arr, self.fil, list(self.strides), self.padding)
+    loss = tf.square(tf.subtract(tf_out, ans))
+    tf_grads = tf.gradients(loss, [arr])
+    sess = tf.Session()
+    tf_grads_out = sess.run(tf_grads)
+    print np.sum(np.absolute(tf_grads_out[0] - my_grad_out))
+
+a = np.random.rand(1, 6, 6, 3).astype(np.float32)
+conv1 = Conv((3, 3, 3, 1), (1, 2, 2, 1), 'VALID')
+# conv1.test_fprop(a)
+conv1.test_bprop(a)
 
 
 
