@@ -7,7 +7,10 @@ np.random.seed(0)
 
 '''
 The following code is referenced from TensorFlow's implementation in
-tf.nn.convolution. Backward propagation of losses in
+tf.nn.convolution. This is one of many ways to write convolution and
+backpropagation of errors (weight gradients not implemented). A better reference
+would be Darknet, where there are only 4 for loops. 1 for the batch, 3 for the
+matrix multiply.
 '''
 
 class Layer(object):
