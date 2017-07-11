@@ -39,7 +39,8 @@ def train():
     add_op = tf.assign_add(global_step, 1)
     train_op = tf.group(weights_op, bias_op, add_op)
     init_op = tf.global_variables_initializer()
-  sess = tf.Session(graph=graph)
+  sess = tf.Session(graph=graph,
+      config=tf.ConfigProto(log_device_placement=True))
   sess.run(init_op)
   for j in xrange(epochs):
     for k in xrange(steps):

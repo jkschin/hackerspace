@@ -70,6 +70,52 @@ def make_move():
         print "RIGHT"
         keypress("key Right ")
 
+def crop_tree(img, coords):
+    x, y = coords
+    x_b, y_b = 50, 25
+    tree = img[y-y_b:y+y_b, x-x_b:x+x_b, :]
+    return tree
+
+def get_score(tree, tree_template):
+    score = np.abs(np.sum(tree.astype(np.float32) -
+        tree_template.astype(np.float32)))
+    return score
+
+def move(img, left_template, right_template):
+    right_trees = [ [1360, 604],
+                    [1360, 504],
+                    [1360, 404],
+                    [1360, 304],
+                    [1360, 204]]
+    left_trees = [  [1190, 604],
+                    [1190, 504],
+                    [1190, 404],
+                    [1190, 304],
+                    [1190, 204]]
+    zipped = zip(left_trees, right_trees)
+    for left_coords, right_coords in zipped:
+        left_tree = crop_tree(img, left_coords)
+        right_tree = crop_tree(img, right_coords)
+        left_score = get_score(left_tree, left_template)
+        right_score = get_score(right_tree, right_template)
+        if left_score <= threshold:
+            keypress("key Right ")
+            keypress("key Right ")
+        elif right_score <= threshold:
+            keypress("key Left ")
+            keypress("key Left ")
+    # if np.sum(img[130, 1360, :]) < np.sum(img[130, 1190, :]):
+    #     keypress("key Left ")
+    #     keypress("key Left ")
+    # else:
+    #     keypress("key Right ")
+    #     keypress("key Right ")
+
+# img = cv2.imread('test.jpg')
+# left_template = cv2.imread('left_tree.png')
+# right_template = cv2.imread('right_tree.png')
+# move(img, left_template, right_template)
+
 delay = 0
 threshold = 800000.0
 def keypress(sequence):
@@ -107,22 +153,23 @@ def main():
                 keypress("key Right ")
                 keypress("key Right ")
             else:
-                left_score = check_left_tree(frame, left_template)
-                right_score = check_right_tree(frame, right_template)
-                print left_score, right_score
-                if left_score <= threshold and (t - prev_left) > 5:
-                    print 'LEFT',
-                    keypress("key Right ")
-                    keypress("key Right ")
-                    prev_left = t
-                elif right_score <= threshold and (t - prev_right) > 5:
-                    print 'RIGHT'
-                    keypress("key Left ")
-                    keypress("key Left ")
-                    prev_right = t
+                move(frame, left_template, right_template)
+                time.sleep(0.23)
+                # time.sleep(1)
+                # left_score = check_left_tree(frame, left_template)
+                # right_score = check_right_tree(frame, right_template)
+                # print left_score, right_score
+                # if left_score <= threshold and (t - prev_left) > 5:
+                #     print 'LEFT',
+                #     keypress("key Right ")
+                #     keypress("key Right ")
+                #     prev_left = t
+                # elif right_score <= threshold and (t - prev_right) > 5:
+                #     print 'RIGHT'
+                #     keypress("key Left ")
+                #     keypress("key Left ")
+                #     prev_right = t
             t += 1
-            break
-        cv2.imwrite('test.jpg', frame)
 main()
 # left_score = np.average(img[703:720, 738:808, :] - left)
 # right_score = np.average(img[703:720, 858:928, :] - right)
