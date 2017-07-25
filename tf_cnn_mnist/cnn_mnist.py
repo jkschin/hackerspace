@@ -26,7 +26,6 @@ from tensorflow.contrib.learn.python.learn.estimators import model_fn as model_f
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
-
 def cnn_model_fn(features, labels, mode):
   """Model function for CNN."""
   # Input Layer
@@ -115,10 +114,16 @@ def cnn_model_fn(features, labels, mode):
           logits, name="softmax_tensor")
   }
 
+  # global_step = tf.Variable(0, trainable=False, name='global_step')
+  # mod = tf.mod(global_step, 6, name='mod')
+  # with tf.control_dependencies([mod]):
+  #   global_inc_op = tf.assign_add(global_step, 1)
+  #   train_op = tf.group(global_inc_op, train_op)
+  # tf.train.global_step()
+
   # Return a ModelFnOps object
   return model_fn_lib.ModelFnOps(
       mode=mode, predictions=predictions, loss=loss, train_op=train_op)
-
 
 def main(unused_argv):
   # Load training and eval data
@@ -134,16 +139,19 @@ def main(unused_argv):
 
   # Set up logging for predictions
   # Log the values in the "Softmax" tensor with label "probabilities"
-  tensors_to_log = {"probabilities": "softmax_tensor"}
+  # tensors_to_log = {"probabilities": "softmax_tensor"}
+  tensors_to_log = {"global_step": "global_step",
+                    #"mod": "mod"
+                    }
   logging_hook = tf.train.LoggingTensorHook(
-      tensors=tensors_to_log, every_n_iter=50)
+      tensors=tensors_to_log, every_n_iter=1)
 
   # Train the model
   mnist_classifier.fit(
       x=train_data,
       y=train_labels,
       batch_size=100,
-      steps=20000,
+      # steps=20000,
       monitors=[logging_hook])
 
   # Configure the accuracy metric for evaluation
