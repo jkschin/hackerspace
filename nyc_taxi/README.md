@@ -8,6 +8,11 @@ again.
 Given a taxi trip, determine if a tip will be paid and if a tip is paid, what
 will be the expected tip amount.
 
+# Details
+
+The details of the entire journey is documented on my website at
+http://jkschin.com/2018/11/02/nyc-taxi.html.
+
 # Data
 
 2017 GYC Green Taxi Data: https://data.cityofnewyork.us/Transportation/2017-Green-Taxi-Trip-Data/5gj9-2kzx
@@ -23,6 +28,8 @@ for the test data.
 2. Download the dataset from the link above.
 3. Put it in the `nyc_taxi` directory.
 4. Rename it as `original.csv`
+5. If you haven't already, use `pip` to install TensorFlow. You can refer to the
+   TensorFlow website for more details.
 
 ## How do I generate the datasets?
 
