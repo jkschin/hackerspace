@@ -64,11 +64,16 @@ weekend = tf.feature_column.categorical_column_with_identity(
     key='weekend',
     num_buckets=2
 )
+to_and_fro = tf.feature_column.crossed_column(
+    [pu_location_id, do_location_id],
+    hash_bucket_size=1000
+)
 categorical_columns = [
   fc.indicator_column(pu_location_id),
   fc.indicator_column(do_location_id),
   fc.indicator_column(day_of_week),
-  fc.indicator_column(weekend)
+  fc.indicator_column(weekend),
+  to_and_fro
   ]
 numeric_columns = [
   custom_numeric_column('passenger_count'),
@@ -84,13 +89,22 @@ numeric_columns = [
   ]
 feature_columns = numeric_columns
 
-classifier = tf.estimator.DNNClassifier(
-    feature_columns=feature_columns,
+# classifier = tf.estimator.DNNClassifier(
+#     feature_columns=feature_columns,
+#     n_classes=2,
+#     hidden_units=[2048,2048,1024,512,256,128,64],
+#     batch_norm=True,
+#     activation_fn=tf.nn.leaky_relu,
+#     optimizer=tf.train.AdamOptimizer(0.0005)
+#     )
+classifier = tf.estimator.DNNLinearCombinedClassifier(
+    linear_feature_columns=categorical_columns,
+    dnn_feature_columns=feature_columns,
+    dnn_hidden_units=[1024, 1024, 512, 256, 128, 64, 32],
+    dnn_optimizer=tf.train.AdamOptimizer(0.0005),
+    dnn_activation_fn=tf.nn.leaky_relu,
     n_classes=2,
-    hidden_units=[2048,2048,1024,512,256,128,64],
     batch_norm=True,
-    activation_fn=tf.nn.leaky_relu,
-    optimizer=tf.train.AdamOptimizer(0.0005)
     )
 classifier.train(train_inpf)
 result = classifier.evaluate(test_inpf)
