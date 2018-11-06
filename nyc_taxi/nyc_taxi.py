@@ -1,131 +1,182 @@
-import pandas as pd
 import tensorflow as tf
-import pickle
+import tensorflow.feature_column as fc
+import os
+import sys
+import matplotlib.pyplot as plt
+import pandas
+import functools
+
 tf.logging.set_verbosity(tf.logging.INFO)
 
-BATCH_SIZE = 256
-TRAIN_PATH = '/home/jkschin/code/hackerspace/nyc_taxi/train.csv'
-TEST_PATH = '/home/jkschin/code/hackerspace/nyc_taxi/test.csv'
-COLUMN_NAMES = ['VendorID', 'lpep_pickup_datetime', 'lpep_dropoff_datetime',
-    'store_and_fwd_flag', 'RatecodeID', 'PULocationID', 'DOLocationID',
-    'passenger_count', 'trip_distance', 'fare_amount', 'extra', 'mta_tax',
-    'tip_amount', 'tolls_amount', 'ehail_fee', 'improvement_surcharge',
-    'total_amount', 'payment_type', 'trip_type', 'duration', 'day_of_week',
-    'weekend', 'speed', 'tip']
+train_file = 'train.csv'
+test_file = 'test.csv'
+train_tips_only_file = 'train_tips_only.csv'
+test_tips_only_file = 'test_tips_only.csv'
+CLASSIFIER_MODEL = 'classifier_model'
+REGRESSOR_MODEL = 'regressor_model'
+TRAIN = False
 
-RECORD_DEFAULTS = [ [0], ['NA'], ['NA'], ['NA'], [0], [0], [0], [0.0],
-    [0.0], [0.0], [0.0], [0.0], [0.0], [0.0], [0.0], [0.0], [0.0], [0], [0.0],
-    [0.0], [0], [0], [0.0], [0]]
-COMPUTE_STATS = False
+def easy_input_function(df, label_key, num_epochs, shuffle, batch_size):
+  label = df[label_key]
+  ds = tf.data.Dataset.from_tensor_slices((dict(df),label))
 
-def compute_statistics():
-  df = pd.read_csv(TRAIN_PATH)
+  if shuffle:
+    ds = ds.shuffle(10000)
+
+  ds = ds.batch(batch_size).repeat(num_epochs)
+
+  return ds
+
+def custom_numeric_column(key, statistics):
+  col = tf.feature_column.numeric_column(key,
+      normalizer_fn=lambda x: (x - statistics[key]['mean']) /
+      statistics[key]['stddev'])
+  return col
+
+def compute_statistics(df):
   # TODO: Transfer this cast and relevant code here to the cleaning step.
   df['passenger_count'] = df['passenger_count'].astype('float64')
   statistics = {}
   for key in df.keys():
     if df[key].dtype == 'float64':
-      print key
       statistics[key] = {}
       statistics[key]['mean'] = df[key].mean()
       statistics[key]['stddev'] = df[key].std()
+      print key, statistics[key]['mean'], statistics[key]['stddev']
+  return statistics
 
-# Only need to compute once and dump it in pickle.
-if COMPUTE_STATS:
-  STATS = compute_statistics()
-  with open('stats.pickle', 'wb') as f:
-    pickle.dump(STATS, f)
-else:
-  with open('stats.pickle', 'rb') as f:
-    STATS = pickle.load(f)
+def inp_functions(train_file, test_file, target):
+  print "Loading data into memory."
+  train_df = pandas.read_csv(train_file)
+  test_df = pandas.read_csv(test_file)
+  statistics = compute_statistics(train_df)
+  train_inpf = functools.partial(easy_input_function, train_df, target,
+      num_epochs=2, shuffle=True, batch_size=64)
+  test_inpf = functools.partial(easy_input_function, test_df, target,
+      num_epochs=1, shuffle=False, batch_size=64)
+  return train_inpf, test_inpf, statistics
 
-def _parse_line(line):
-  fields = tf.decode_csv(line, record_defaults=RECORD_DEFAULTS)
-  features = dict(zip(COLUMN_NAMES, fields))
-  # TODO: Transfer this into the cleaning step.
-  features['PULocationID'] -= 1
-  features['DOLocationID'] -= 1
-  # label = features.pop('tip_amount')
-  # label = (label - STATS['tip_amount']['mean']) / STATS['tip_amount']['stddev']
-  label = features.pop('tip')
-  return features, label
-
-def csv_input_fn(csv_path, batch_size):
-  # Skip the headers
-  dataset = tf.data.TextLineDataset(csv_path).skip(1)
-  dataset = dataset.map(_parse_line)
-  dataset = dataset.shuffle(100000).repeat().batch(batch_size)
-  return dataset
-
-def eval_input_fn(csv_path):
-  dataset = tf.data.TextLineDataset(csv_path).skip(1)
-  dataset = dataset.map(_parse_line)
-  return dataset
-
-def custom_numeric_column(key):
-  col = tf.feature_column.numeric_column(key,
-      normalizer_fn=lambda x: (x - STATS[key]['mean']) / STATS[key]['stddev'])
-  return col
-
-vendor_id = tf.feature_column.categorical_column_with_vocabulary_list(
-    key='VendorID',
-    vocabulary_list=(1, 2)
-)
-pu_location_id = tf.feature_column.categorical_column_with_identity(
-    key='PULocationID',
-    num_buckets=265
-)
-do_location_id = tf.feature_column.categorical_column_with_identity(
-    key='DOLocationID',
-    num_buckets=265
-)
-payment_type = tf.feature_column.categorical_column_with_vocabulary_list(
-    key='payment_type',
-    vocabulary_list=(1, 2, 3, 4, 5)
-)
-trip_type = tf.feature_column.categorical_column_with_vocabulary_list(
-    key='trip_type',
-    vocabulary_list=(1, 2),
-    num_oov_buckets=1
-)
-feature_columns = [
-    # tf.feature_column.indicator_column(vendor_id),
-    # tf.feature_column.indicator_column(pu_location_id),
-    # tf.feature_column.indicator_column(do_location_id),
-    custom_numeric_column('passenger_count'),
-    custom_numeric_column('trip_distance'),
-    custom_numeric_column('fare_amount'),
-    custom_numeric_column('extra'),
-    custom_numeric_column('mta_tax'),
-    custom_numeric_column('tolls_amount'),
-    custom_numeric_column('improvement_surcharge'),
-    custom_numeric_column('total_amount')
-    # tf.feature_column.indicator_column(payment_type),
-    # tf.feature_column.indicator_column(trip_type)
+def build_features(statistics):
+  pu_location_id = fc.categorical_column_with_identity(
+      key='PULocationID',
+      num_buckets=265
+  )
+  do_location_id = fc.categorical_column_with_identity(
+      key='DOLocationID',
+      num_buckets=265
+  )
+  day_of_week = fc.categorical_column_with_identity(
+      key='day_of_week',
+      num_buckets=7
+  )
+  weekend = fc.categorical_column_with_identity(
+      key='weekend',
+      num_buckets=2
+  )
+  speed_buckets = fc.bucketized_column(fc.numeric_column('speed'),
+      boundaries=[10, 20, 30, 40, 50, 60, 70]
+  )
+  distance_buckets = fc.bucketized_column(fc.numeric_column('trip_distance'),
+      boundaries=[2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
+  )
+  duration_buckets = fc.bucketized_column(fc.numeric_column('duration'),
+      boundaries=[500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500]
+  )
+  fare_buckets = fc.bucketized_column(fc.numeric_column('fare_amount'),
+      boundaries=[2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
+  )
+  passenger_buckets = fc.bucketized_column(fc.numeric_column('passenger_count'),
+      boundaries=[1, 3, 5, 7, 9]
+  )
+  location = fc.crossed_column(
+      [pu_location_id, do_location_id],
+      hash_bucket_size=1000
+  )
+  cross_all = fc.crossed_column(
+      [location, speed_buckets, distance_buckets, duration_buckets,
+        fare_buckets, passenger_buckets],
+      hash_bucket_size=1000
+  )
+  categorical_columns = [
+    fc.embedding_column(pu_location_id, dimension=32),
+    fc.embedding_column(do_location_id, dimension=32),
+    fc.indicator_column(day_of_week),
+    fc.indicator_column(weekend)
     ]
-# dataset = tf.data.TextLineDataset(TRAIN_PATH).skip(1)
-# dataset = dataset.map(_parse_line)
-# dataset = dataset.shuffle(100000).repeat().batch(BATCH_SIZE)
-# features = tf.parse_example(dataset,
-#     features=tf.feature_column.make_parse_example_spec(feature_columns))
-# layers = [tf.feature_column.input_layer(features, feature_columns)]
-# layers.append(tf.layers.dense(layers[-1], 2048))
-# layers.append(tf.layers.dense(layers[-1], 1))
-# print layers
-est = tf.estimator.DNNClassifier(
-    feature_columns=feature_columns,
-    n_classes=2,
-    hidden_units=[2048, 1024, 512, 256, 128, 64],
-    batch_norm=True,
-    activation_fn=tf.nn.relu,
-    optimizer=lambda: tf.train.AdamOptimizer(
-      learning_rate=0.001
-      ))
-est.train(
-    steps=200,
-    input_fn=lambda: csv_input_fn(TRAIN_PATH, BATCH_SIZE))
-# pred = est.predict(input_fn=eval_input_fn(TEST_PATH),
-#     yield_single_examples=False)
-pred = est.evaluate(
-    input_fn=lambda: eval_input_fn(TEST_PATH))
+  numeric_columns = [
+    custom_numeric_column('passenger_count', statistics),
+    custom_numeric_column('trip_distance', statistics),
+    custom_numeric_column('fare_amount', statistics),
+    custom_numeric_column('extra', statistics),
+    custom_numeric_column('mta_tax', statistics),
+    custom_numeric_column('tolls_amount', statistics),
+    custom_numeric_column('improvement_surcharge', statistics),
+    custom_numeric_column('duration', statistics),
+    custom_numeric_column('speed', statistics)
+    ]
+  dnn_feature_columns = numeric_columns + categorical_columns
+  linear_feature_columns = [location, cross_all]
+  return dnn_feature_columns, linear_feature_columns
+
+def build_classifier():
+  train_inpf, test_inpf, statistics = inp_functions(train_file,
+      test_file,
+      'tip')
+  dnn_feature_columns, linear_feature_columns = build_features(statistics)
+  classifier = tf.estimator.DNNLinearCombinedClassifier(
+      model_dir=CLASSIFIER_MODEL,
+      linear_feature_columns=linear_feature_columns,
+      dnn_feature_columns=dnn_feature_columns,
+      dnn_hidden_units=[1024, 512, 256],
+      dnn_optimizer='Adagrad',
+      dnn_activation_fn=tf.nn.relu,
+      n_classes=2,
+      batch_norm=True,
+      )
+  return classifier, train_inpf, test_inpf
+
+def build_regressor():
+  train_inpf, test_inpf, statistics = inp_functions(train_tips_only_file,
+      test_tips_only_file,
+      'tip_amount')
+  dnn_feature_columns, linear_feature_columns = build_features(statistics)
+  classifier = tf.estimator.DNNLinearCombinedRegressor(
+      model_dir=REGRESSOR_MODEL,
+      linear_feature_columns=linear_feature_columns,
+      dnn_feature_columns=dnn_feature_columns,
+      dnn_hidden_units=[1024, 512, 256],
+      dnn_optimizer='Adagrad',
+      dnn_activation_fn=tf.nn.relu,
+      batch_norm=True,
+      )
+  return classifier, train_inpf, test_inpf
+
+# Only this part of the code and below needs to be edited.
+
+# TODO: Shift the loads out. We have to precompute the statistics and save it in
+# a static file. But since the data is small, we just compute the statistics
+# every time.
+classifier, c_train_inpf, c_test_inpf = build_classifier()
+regressor, r_train_inpf, r_test_inpf = build_regressor()
+if TRAIN:
+  classifier.train(c_train_inpf)
+  c_result = classifier.evaluate(c_test_inpf)
+  print c_result
+  regressor.train(r_train_inpf)
+  r_result = regressor.evaluate(r_test_inpf)
+  print r_result
+else:
+  test_df = pandas.read_csv('test_1.csv')
+  if test_df['payment_type'][0] != 1:
+    print 'This is not a credit card transaction. No tip is expected.'
+  else:
+    test_inpf = functools.partial(easy_input_function, test_df, 'VendorID',
+        num_epochs=1, shuffle=False, batch_size=64)
+    cls_pred = list(classifier.predict(test_inpf))[0]['class_ids'][0]
+    if cls_pred == 1:
+      rgs_pred = list(regressor.predict(test_inpf))[0]['predictions'][0]
+      print 'A %f tip is predicted' %(rgs_pred)
+    else:
+      print 'A tip is not predicted.'
+  print 'Since we have the answers, the actual tip that was given was %f.'%(test_df['tip_amount'][0])
 
