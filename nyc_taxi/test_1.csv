@@ -1,0 +1,2 @@
+VendorID,lpep_pickup_datetime,lpep_dropoff_datetime,store_and_fwd_flag,RatecodeID,PULocationID,DOLocationID,passenger_count,trip_distance,fare_amount,extra,mta_tax,tip_amount,tolls_amount,ehail_fee,improvement_surcharge,total_amount,payment_type,trip_type,duration,day_of_week,weekend,speed,tip
+2,2017-01-01 00:04:02,2017-01-01 00:12:55,N,1,81,69,5.0,3.45,12.0,0.5,0.5,2.66,0.0,,0.3,15.96,1,1.0,533.0,6,1,23.30206378986867,1
