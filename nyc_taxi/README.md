@@ -43,6 +43,9 @@ for the test data.
 
 ## How do I make a prediction on the model?
 
+**It isn't necessary to train a model first as I have included the models in
+this repository. This should run as is.**
+
 1. First note that this only works on a single example. It will not work as
    expected if the CSV has more than 2 rows (header and data). Feel free to
    include `tip_amount` and `total_amount`. It won't be used in any case, and
