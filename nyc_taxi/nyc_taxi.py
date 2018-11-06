@@ -14,7 +14,6 @@ train_tips_only_file = 'train_tips_only.csv'
 test_tips_only_file = 'test_tips_only.csv'
 CLASSIFIER_MODEL = 'classifier_model'
 REGRESSOR_MODEL = 'regressor_model'
-TRAIN = False
 
 def easy_input_function(df, label_key, num_epochs, shuffle, batch_size):
   label = df[label_key]
@@ -152,6 +151,7 @@ def build_regressor():
   return classifier, train_inpf, test_inpf
 
 # Only this part of the code and below needs to be edited.
+TRAIN = False
 
 # TODO: Shift the loads out. We have to precompute the statistics and save it in
 # a static file. But since the data is small, we just compute the statistics

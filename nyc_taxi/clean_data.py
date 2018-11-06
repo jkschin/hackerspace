@@ -1,9 +1,11 @@
 import pandas as pd
 import numpy as np
 
-TRAIN_PATH = '/home/jkschin/code/hackerspace/nyc_taxi/train_all_payments.csv'
-TEST_PATH = '/home/jkschin/code/hackerspace/nyc_taxi/test_all_payments.csv'
-INPUT_PATH = '/home/jkschin/code/hackerspace/nyc_taxi/original.csv'
+C_TRAIN_PATH = 'train.csv'
+C_TEST_PATH = 'test.csv'
+R_TRAIN_PATH = 'train_tips_only.csv'
+R_TEST_PATH = 'test_tips_only.csv'
+INPUT_PATH = 'original.csv'
 
 def label_weekend(row):
   if row['day_of_week'] in [0, 1, 2, 3, 4]:
@@ -79,18 +81,18 @@ def main():
 
   print "Writing training data."
   train = df.sample(frac=0.8, random_state=200)
-  train.to_csv(TRAIN_PATH, index=False)
+  train.to_csv(C_TRAIN_PATH, index=False)
   print "Writing testing data."
   test = df.drop(train.index)
-  test.to_csv(TEST_PATH, index=False)
+  test.to_csv(C_TEST_PATH, index=False)
 
-def adhoc():
-  train = pd.read_csv(TRAIN_PATH)
-  test = pd.read_csv(TEST_PATH)
-  train = train[train['duration'] > 0]
-  test = test[test['duration'] > 0]
-  train.to_csv(TRAIN_PATH, index=False)
-  test.to_csv(TEST_PATH, index=False)
+  print "Writing training data."
+  train = train[train['tip'] == 1]
+  train.to_csv(R_TRAIN_PATH, index=False)
+  print "Writing testing data."
+  test = test[test['tip'] == 1]
+  test.to_csv(R_TEST_PATH, index=False)
+
 
 if __name__ == '__main__':
   main()
