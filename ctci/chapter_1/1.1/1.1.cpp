@@ -34,7 +34,10 @@ bool isUnique2(string str) {
 
 int main()
 {
-  const string str = "EABCDE";
-  bool ans = isUnique2(str);
-  cout << ans << endl;
+  const string str1 = "EABCDE";
+  const string str2 = "ABCDEFGH";
+  bool ans1 = isUnique2(str1);
+  bool ans2 = isUnique2(str2);
+  cout << ans1 << endl;
+  cout << ans2 << endl;
 }
