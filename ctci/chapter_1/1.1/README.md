@@ -1,3 +1,6 @@
+Determine if a string has all unique characters. What if you can't use
+additional data structures?
+
 A really simple problem. Writing it in C++ to get familiar with it again and
 make C++ my go-to language. I only wrote 2 test cases for this and had to
 compile the code twice just to test it. There has to be a better way to do this.
