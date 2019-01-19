@@ -31,47 +31,10 @@ Pseudo Code:
    even, return false when we see an odd count, else return true.
 
 Test Cases:
-1. AAABBBCCCCDDDD - True
-2. AAABBBCCCC - True
+1. AAABBBCCCCDDDD - False
+2. AAABBBCCCC -False 
 3. AAABBBCCC - False
-4. AABBCCCD - False
-5. AABBCCCDDD - True
+4. AAABBCCC - False
+5. AAABBAAA - True
+6. AABBCCDEF - False
 
-
-bool IsPalindrome(string str) {
-  map<char, int> counts;
-  int total_chars = 0;
-  for (char& c : str) {
-    c = tolower(c);
-    if (c != ' ') {
-      map[c]++;
-      total_chars++;
-    }
-  }
-  int num_odd = 0;
-  int num_even = 0;
-  for (auto const& : counts) {
-    if (map[c] % 2 == 0) {
-      num_even++;
-    }
-    else {
-      num_odd++;
-    }
-  }
-  if (total_chars % 2 == 0) {
-    if (num_odd % 2 !=  0) {
-      return false;
-    }
-    else {
-      return true;
-    }
-  }
-  else {
-    if (num_odd > 1) {
-      return false;
-    }
-    else {
-      return true;
-    }
-  }
-}
