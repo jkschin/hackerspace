@@ -21,6 +21,7 @@ delete.
 
 **Case 5 Walkthrough - Replace**
 
+```
 **Not Equal**
 a a b b 
     ^ 
@@ -41,9 +42,11 @@ a a b b
 
 a a a b
       ^ 
+```
 
 **Case 7 Walkthrough - Deletion**
 
+```
 **Not Equal**
 a a b c
     ^
@@ -57,6 +60,7 @@ a a b c
 
 a a c
     ^
+```
 
 Pseudo Code:
 1. Start with first character of both strings.
